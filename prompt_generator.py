@@ -95,3 +95,7 @@ def sample_prompts(input_file, output_file, sample_count):
         for prompt in sampled_prompts:
             writer.writerow(prompt)
 
+            
+
+generate_prompts('C:\\aiseo\\SEOArticlegenAI\\SEO_Template.csv', 'output_prompts.csv')
+sample_prompts('output_prompts.csv', 'sampled_prompts.csv', 5)  # Adjust sample count as needed

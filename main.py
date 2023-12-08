@@ -13,9 +13,15 @@ import openai
 import pandas as pd
 import json
 from tqdm import tqdm
+import re
 
+# Load environment variables from a .env file
 load_dotenv()
-openai.organization_id = os.environ['OPENAI_ORGANIZATION_ID']
+
+
+
+# Access OpenAI organization ID and API key
+openai.organization_id = os.getenv("OPENAI_ORGANIZATION_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 logging.basicConfig(level=logging.INFO)
@@ -28,7 +34,7 @@ SAMPLES_PER_CAT = 1  # Number of samples per category
 SEO_TOKENS = "SEO_Template_full.csv"
 TOKEN_LENGTH = 3000  # Max size of the generated prompts in tokens
 
-PROMPT_CSV_FILENAME = "prompts.csv"  # If not None, read prompts from this CSV file instead of generating prompts from the tokens.
+PROMPT_CSV_FILENAME = "sampled_prompts.csv"  # If not None, read prompts from this CSV file instead of generating prompts from the tokens.
 
 
 PRIMER = (
@@ -62,8 +68,17 @@ PRIMER = (
 ""
 )
 ########################################
+def sanitize_filename(filename):
+    """
+    Function to sanitize filenames to remove illegal characters
+    """
+    return re.sub(r'[\\/*?:"<>|]', "", filename)
+
 
 def create_pdf(title, subtitle, body, output_filename):
+     # Sanitize the title and subtitle
+    title = sanitize_filename(title)
+    subtitle = sanitize_filename(subtitle)
     styles = """
         <style>
             h1 {
