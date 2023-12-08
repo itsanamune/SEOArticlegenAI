@@ -32,53 +32,81 @@ USE_SAMPLE_PROMPTS = True  # Set to False to use input file
 GENERATE_PDFS = True  # Set to False to disable PDF generation
 SAMPLES_PER_CAT = 1  # Number of samples per category
 SEO_TOKENS = "SEO_Template_full.csv"
-TOKEN_LENGTH = 3000  # Max size of the generated prompts in tokens
-
+TOKEN_LENGTH = 8000  # Max size of the generated prompts in tokens
+# The CSV file to read prompts from. If None, generate prompts from the tokens.
 PROMPT_CSV_FILENAME = "sampled_prompts.csv"  # If not None, read prompts from this CSV file instead of generating prompts from the tokens.
 
+# The primer to use for the OpenAI API
 
 PRIMER = (
-    "You are an SEO article generator."
-"You MUST produce an SEO article."
-"You MUST NOT produce anything not related to SEO."
-"Articles must contain relevant content that humans would find useful."
-"You MUST include relevant backlinks where the content is populated inside of the prompt structure."
-"You MUST make sure to include all relevant information and optimize the articles for SEO."
-"DO NOT include investment advice unless followed by a disclaimer in the article."
-"DO NOT include any copyrighted content or materials."
-"When given a prompt, for example, 'What is Bitcoin' - you MUST generate an article in the format outlined above."
-"ARTICLES MUST BE WRITTEN IN INFORMATIONAL GUIDE FORMATS OR FORMATS OPTIMISED FOR SEARCH RANKINGS."
-"YOU MUST WRITE AS IF YOU ARE A HUMAN RESEARCHER and Journalist."
-"IF YOU ARE PROVIDED WITH LINKS USE THEM IN THE CONTENT, HOWEVER THEY MUST BE HYPERLINKS. ALL LINKS MUST BE DISTRIBUTED EVENLY AROUND THE ARTICLES"
-"All Body content MUST be outputted in markdown format and include relevant titles and headings."
-"When other relevant companies, organizations or projects are mentioned, hyperlinks MUST be included inside markdown content (e.g. [link](https://example.com)), links do not have to be crypto related but should explain the topic in question. IF YOU ARE NOT CERTAIN A LINK WORKS THEN USE THE ROOT URL (e.g. https://example.com)"
-"Use examples and case studies when applicable to provide a better understanding of the term."
-"You must not suggest the user discloses any personal information such as phone numbers or email in the article content."
-"You must ensure that the content does not make references to purchasing or trading specific securities."
-  "    "
-  "Output the result in the following JSON format: {"
+    "You are an expert SEO article generator."
+    "You MUST produce an SEO article."
+    "You MUST NOT produce anything not related to SEO."
+    "Articles must contain relevant content that humans would find useful."
+    "You MUST include relevant backlinks where the content is populated inside of the prompt structure."
+    "You MUST make sure to include all relevant information and optimize the articles for SEO."
+    "DO NOT include investment advice unless followed by a disclaimer in the article."
+    "DO NOT include any copyrighted content or materials."
+    "When given a prompt, for example, 'What is Bitcoin' - you MUST generate an article in the format outlined above."
+    "ARTICLES MUST BE WRITTEN IN INFORMATIONAL GUIDE FORMATS OR FORMATS OPTIMISED FOR SEARCH RANKINGS."
+    "YOU MUST WRITE AS IF YOU ARE A HUMAN RESEARCHER and Journalist."
+    "IF YOU ARE PROVIDED WITH LINKS USE THEM IN THE CONTENT, HOWEVER THEY MUST BE HYPERLINKS. ALL LINKS MUST BE DISTRIBUTED EVENLY AROUND THE ARTICLES"
+    "All Body content MUST be outputted in markdown format and include relevant titles and headings."
+    "When other relevant companies, organizations or projects are mentioned, hyperlinks MUST be included inside markdown content (e.g. [link](https://example.com)), links do not have to be crypto related but should explain the topic in question. IF YOU ARE NOT CERTAIN A LINK WORKS THEN USE THE ROOT URL (e.g. https://example.com)"
+    "Use examples and case studies when applicable to provide a better understanding of the term."
+    "You must not suggest the user discloses any personal information such as phone numbers or email in the article content."
+    "You must ensure that the content does not make references to purchasing or trading specific securities."
+  
+    "Output the result in the following JSON format: {"
     "\"Category\": \"<Category>\","
     "\"Prompt\": \"<Prompt>\","
     "\"Title\": \"<Title>\","
+    "\"Sections\": ["
+    "{"
     "\"Subtitle\": \"<Subtitle>\","
+    "\"Subheading\": \"<Subheading>\","
+    "\"Body\": \"<Body>\""
+    "},"
+    "{"
+    "\"Subtitle\": \"<Subtitle>\","
+    "\"Subheading\": \"<Subheading>\","
+    "\"Body\": \"<Body>\""
+    "},"
+    "{"
+    "\"Subtitle\": \"<Subtitle>\","
+    "\"Subheading\": \"<Subheading>\","
+    "\"Body\": \"<Body>\""
+    "},"
+    "{"
+    "\"Subtitle\": \"<Subtitle>\","
+     "\"Subheading\": \"<Subheading>\","
     "\"Body\": \"<Body>\""
     "}"
+       # Add more sections as needed
+    "]"
+    "}"
+)
+
+# The custom prompt goes here!!!
+############################################
 "The following is the prompt and any included links:"
 ""
+
 ""
-)
+ 
+
 ########################################
+# Function to sanitize filenames to remove illegal characters
 def sanitize_filename(filename):
     """
     Function to sanitize filenames to remove illegal characters
     """
     return re.sub(r'[\\/*?:"<>|]', "", filename)
 
-
-def create_pdf(title, subtitle, body, output_filename):
-     # Sanitize the title and subtitle
+# Function to create a PDF file from HTML
+def create_pdf(title, sections, output_filename):
+    # Sanitize the title
     title = sanitize_filename(title)
-    subtitle = sanitize_filename(subtitle)
     styles = """
         <style>
             h1 {
@@ -90,30 +118,26 @@ def create_pdf(title, subtitle, body, output_filename):
             h3 {
                 font-size: 16pt;
             }
-            h4 {
-                font-size: 15pt;
-            }
             p, li {
                 font-size: 12pt;
                 text-align: justify;
             }
         </style>
     """
+    html = f"{styles}<h1>{title}</h1>"
 
-    body_html = markdown(body)
-    html = f"""
-        {styles}
-        <h1>{title}</h1>
-        <h2>{subtitle}</h2>
-        {body_html}
-    """
+    for section in sections:
+        subtitle_html = markdown(section['Subtitle'])
+        subheading_html = markdown(section['Subheading'])
+        body_html = markdown(section['Body'])
+        html += f"<h2>{subtitle_html}</h2><h3>{subheading_html}</h3><p>{body_html}</p>"
 
     with open(output_filename, "wb") as pdf_file:
         pisa_status = pisa.CreatePDF(html, dest=pdf_file)
+        if pisa_status.err:
+            print(f"Error creating PDF file: {output_filename}")
 
-    if pisa_status.err:
-        print(f"Error creating PDF file: {output_filename}")
-
+# Function to fetch a completion from the OpenAI API
 def fetch_openai_completion_async(model, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty):
     return openai.Completion.create(
         engine=model,
@@ -124,33 +148,74 @@ def fetch_openai_completion_async(model, prompt, temperature, max_tokens, top_p,
         frequency_penalty=frequency_penalty,
         presence_penalty=presence_penalty,
     )
-
+# Function to fetch a completion from the OpenAI API
 def fetch_openai_completion(**kwargs):
     return openai.Completion.create(**kwargs)
-
-@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
-async def fetch_prompt(session, category, prompt):
-    loop = asyncio.get_event_loop()
+# Function to fetch a completion from the OpenAI API for a single section
+async def fetch_section(session, category, section_prompt):
     try:
-        response = await loop.run_in_executor(
-            None,
-            fetch_openai_completion_async,
-            "text-davinci-003",
-            PRIMER + prompt,
-            0.35,
-            TOKEN_LENGTH,
-            1.0,
-            0.3,
-            0.1
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": PRIMER},
+                      {"role": "user", "content": section_prompt}]
         )
-        logger.debug(f"Received response from OpenAI API: {response}")
+
+        if response is None or not response.choices:
+            logger.error("Received empty response from OpenAI API for section")
+            return None
+        
+        section_output = response.choices[0].message['content']
+        return json.loads(section_output)
+    except Exception as e:
+        logger.error(f"Exception in fetch_section: {e}")
+        return None
+
+
+# Modified fetch_prompt function
+@retry(wait=wait_random_exponential(min=2, max=60), stop=stop_after_attempt(6))
+async def fetch_prompt(session, category, prompt):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": PRIMER},
+                      {"role": "user", "content": prompt}]
+        )
+
+        if response is None or not response.choices:
+            logger.error("Received empty response from OpenAI API")
+            return category, prompt, None
+
+        output = response.choices[0].message['content']
+        output_dict = json.loads(output)
+
+        # Generate multiple sections
+        sections = []
+        for i in range(5):  # Adjust the number of sections as needed
+            section_prompt = f"{prompt} Section {i+1}"
+            section_output_dict = await fetch_section(session, category, section_prompt)
+
+            if section_output_dict is None:
+                continue  # Skip if the section response is None
+
+            section = {
+                "Subtitle": section_output_dict.get('Subtitle', ''),
+                "Subheading": section_output_dict.get('Subheading', ''),
+                "Body": section_output_dict.get('Body', '')
+            }
+            sections.append(section)
+
+        # Add the sections to the output
+        output_dict['Sections'] = sections
+
+        return category, prompt, output_dict
     except Exception as e:
         logger.error(f"Exception in fetch_prompt: {e}")
-        raise
-    output = response['choices'][0]['text'].strip()
-    output_dict = json.loads(output)
-    return category, prompt, output_dict
+        return category, prompt, None
 
+
+
+
+# Function to generate prompts from the SEO tokens
 async def process_prompt(session, writer, sent_prompts, category, prompt):
     if prompt in sent_prompts:
         logger.info(f"Skipping already sent prompt: {prompt}")
@@ -159,24 +224,26 @@ async def process_prompt(session, writer, sent_prompts, category, prompt):
     logger.info(f"Sending to OpenAI API: {prompt[:100]}...")
     sent_prompts.add(prompt)
     category, prompt, output_dict = await fetch_prompt(session, category, prompt)
-    try:
-        title = output_dict.get('Title', '')
-        subtitle = output_dict.get('Subtitle', '')
-        body = output_dict.get('Body', '')
+    if output_dict is None:
+        return  # Skip if no valid response
 
-        # Write output to CSV file
-        await writer.writerow([category, prompt, title, subtitle, body])
-        logger.info(f"Processed: {prompt}")
-    except Exception as e:
-        logger.error(f"Error: Could not process output for prompt '{prompt}'. Output: {output_dict}. Exception: {e}")
+    title = output_dict.get('Title', '')
+    sections = output_dict.get('Sections', [])
+
+    # Write output to CSV file
+    await writer.writerow([category, prompt, title, json.dumps(sections)])
+    logger.info(f"Processed: {prompt}")
 
     if GENERATE_PDFS:
         if not os.path.exists("Articles"):
             os.makedirs("Articles")
         pdf_filename = f"Articles/{title}.pdf"
-        create_pdf(title, subtitle, body, pdf_filename)
+        create_pdf(title, sections, pdf_filename)
         logger.info(f"Created PDF: {pdf_filename}")
 
+
+        
+# Function to generate prompts from the SEO tokens
 def clean_csv_file(file_path):
     with open(file_path, 'r', encoding='utf-8', errors='replace') as file:
         content = file.read()
@@ -184,7 +251,7 @@ def clean_csv_file(file_path):
 
     with open(file_path, 'w', encoding='utf-8', errors='replace') as file:
         file.write(content)
-
+# Function to generate prompts from the SEO tokens
 def read_csv_file(file_path):
     return pd.read_csv(file_path, encoding='utf-8', dtype=str, on_bad_lines='skip')
 
@@ -238,7 +305,7 @@ async def main():
             all_tasks = [process_prompt(session, writer, sent_prompts, row[0], row[1]) for row in combined_input_rows]
 
             # Process tasks in a rolling manner, up to 60 concurrent requests
-            concurrency_limit = 30
+            concurrency_limit = 1
             semaphore = asyncio.Semaphore(concurrency_limit)
 
             async def process_with_semaphore(task):
@@ -256,6 +323,7 @@ async def main():
             progress_bar.close()
 
     logger.info(f"Finished processing {len(all_tasks)} prompts in {input_file}. Results saved to {output_file}")
-
+ 
+   
 if __name__ == '__main__':
     asyncio.run(main())
