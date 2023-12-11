@@ -95,6 +95,30 @@ def sample_prompts(input_file, output_file, sample_count):
         for prompt in sampled_prompts:
             writer.writerow(prompt)
 
+
+def generate_structured_prompts(input_file, output_file):
+    structured_prompts = []
+
+    with open(input_file, newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            category = row['Category'].strip()
+            obj = row['object'].strip()
+            obj_type = row['type'].strip()
+
+            # Construct a structured prompt
+            prompt = f"Write an article section about '{obj}' in the category '{category}' ({obj_type}).\n"
+            structured_prompts.append(prompt)
+
+    # Writing the generated prompts to an output file
+    with open(output_file, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        for prompt in structured_prompts:
+            writer.writerow([prompt])
+
+# Example usage with actual file paths
+generate_structured_prompts('C:\\aiseo\\SEOArticlegenAI\\SEO_Template.csv', 'output_prompts.csv')
+
             
 
 generate_prompts('C:\\aiseo\\SEOArticlegenAI\\SEO_Template.csv', 'output_prompts.csv')

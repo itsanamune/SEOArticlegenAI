@@ -173,7 +173,8 @@ async def process_prompt(session, writer, sent_prompts, category, prompt):
     if GENERATE_PDFS:
         if not os.path.exists("Articles"):
             os.makedirs("Articles")
-        pdf_filename = f"Articles/{title}.pdf"
+        sanitized_title = sanitize_filename(title)
+        pdf_filename = f"Articles/{sanitized_title}.pdf"
         create_pdf(title, subtitle, body, pdf_filename)
         logger.info(f"Created PDF: {pdf_filename}")
 
@@ -198,17 +199,8 @@ async def main():
     output_file = 'output_results.csv'
     logger.info(f"Output file: {output_file}")
 
-    if PROMPT_CSV_FILENAME is None:
-        # Generating prompts
-        input_file = 'output_prompts.csv'
-        generate_prompts(SEO_TOKENS, input_file)
-        # Sampling generated prompts
-        sample_prompts(input_file, "sample_prompts.csv", SAMPLES_PER_CAT)
-
-        if USE_SAMPLE_PROMPTS:
-            input_file = 'sample_prompts.csv'
-    else:
-        input_file = PROMPT_CSV_FILENAME
+    # Change the input file to 'output_prompts.csv'
+    input_file = 'C:\\aiseo\\SEOArticlegenAI\\output_prompts.csv'
 
     # Clean the input CSV file before processing
     clean_csv_file(input_file)
