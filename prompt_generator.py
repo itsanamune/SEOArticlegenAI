@@ -116,6 +116,7 @@ def generate_structured_prompts(input_file, output_file):
         for prompt in structured_prompts:
             writer.writerow([prompt])
 
+
 # Example usage with actual file paths
 generate_structured_prompts('C:\\aiseo\\SEOArticlegenAI\\SEO_Template.csv', 'output_prompts.csv')
 
@@ -123,3 +124,4 @@ generate_structured_prompts('C:\\aiseo\\SEOArticlegenAI\\SEO_Template.csv', 'out
 
 generate_prompts('C:\\aiseo\\SEOArticlegenAI\\SEO_Template.csv', 'output_prompts.csv')
 sample_prompts('output_prompts.csv', 'sampled_prompts.csv', 5)  # Adjust sample count as needed
+generate_structured_prompts('C:\\aiseo\\SEOArticlegenAI\\SEO_Template.csv', 'output_structured_prompts.csv')
